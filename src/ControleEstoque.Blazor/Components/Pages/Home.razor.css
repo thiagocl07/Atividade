@@ -1,0 +1,31 @@
+.page-shell {
+    margin-top: 1rem;
+}
+
+.section-intro {
+    border-left: 4px solid #1b6ec2;
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.section-intro p {
+    color: #555;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.result-item {
+    border-radius: 0.5rem;
+}
+
+@media (max-width: 767.98px) {
+    .section-intro {
+        padding-left: 0.75rem;
+    }
+}

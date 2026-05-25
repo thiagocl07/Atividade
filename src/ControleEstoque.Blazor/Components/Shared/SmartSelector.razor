@@ -1,0 +1,43 @@
+@using Microsoft.AspNetCore.Components
+<div class="mb-3">
+    <label class="form-label">@Label</label>
+    @if (Items is null || Items.Count <= Threshold)
+    {
+        <select class="form-select" @bind="Value">
+            <option value="">Selecione...</option>
+            @foreach (var item in Items ?? Array.Empty<string>())
+            {
+                <option value="@item">@item</option>
+            }
+        </select>
+    }
+    else
+    {
+        <input class="form-control" placeholder="Digite para buscar..." list="@ListId" @bind="Value" @bind:event="oninput" />
+        <datalist id="@ListId">
+            @foreach (var item in Items)
+            {
+                <option value="@item"></option>
+            }
+        </datalist>
+    }
+</div>
+
+@code {
+    private readonly string ListId = $"items-{Guid.NewGuid():N}";
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyCollection<string>? Items { get; set; }
+
+    [Parameter]
+    public int Threshold { get; set; } = 8;
+}

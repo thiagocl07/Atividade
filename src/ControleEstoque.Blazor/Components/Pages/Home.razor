@@ -1,0 +1,207 @@
+﻿@page "/"
+@inject IProdutoService ProdutoService
+
+<PageTitle>Registro de produtos</PageTitle>
+
+<div class="page-shell">
+    <section class="section-intro">
+        <h1>Controle de estoque</h1>
+        <p>Registre, atualize e pesquise produtos com persistência em memória.</p>
+    </section>
+
+    <div class="row gx-4">
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">Dados do produto</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código</label>
+                        <input class="form-control" @bind="codigo" placeholder="Ex: PRD-001" disabled="@editing" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input class="form-control" @bind="nome" placeholder="Nome do produto" />
+                    </div>
+
+                    <SmartSelector Label="Categoria" Items="Categorias" @bind-Value="categoria" Threshold="6" />
+                    <SmartSelector Label="Fornecedor" Items="Fornecedores" @bind-Value="fornecedor" Threshold="6" />
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label">Preço unitário</label>
+                            <input class="form-control" type="number" min="0" step="0.01" @bind="precoUnitario" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Estoque mínimo</label>
+                            <input class="form-control" type="number" min="0" @bind="estoqueMinimo" />
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary" @onclick="SalvarProduto">@ButtonText</button>
+                        <button class="btn btn-outline-secondary" @onclick="ResetForm">Limpar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Busca por código</div>
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <input class="form-control" placeholder="Informe o código" @bind="codigoBusca" />
+                        <button class="btn btn-outline-primary" @onclick="BuscarPorCodigo">Buscar</button>
+                    </div>
+
+                    @if (resultadosBusca.Any())
+                    {
+                        <div class="search-results">
+                            @foreach (var produto in resultadosBusca)
+                            {
+                                <div class="result-item">
+                                    <strong>@produto.Codigo</strong> — @produto.Nome
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(codigoBusca))
+                    {
+                        <p class="text-muted">Nenhum produto encontrado para esse código.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span>Produtos cadastrados</span>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="LoadProducts">Atualizar lista</button>
+                </div>
+                <div class="card-body">
+                    @if (!produtos.Any())
+                    {
+                        <p class="text-muted">Nenhum produto cadastrado ainda.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Nome</th>
+                                        <th>Categoria</th>
+                                        <th>Fornecedor</th>
+                                        <th>Estoque</th>
+                                        <th>Min.</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var produto in produtos)
+                                    {
+                                        <tr>
+                                            <td>@produto.Codigo</td>
+                                            <td>@produto.Nome</td>
+                                            <td>@produto.Categoria</td>
+                                            <td>@produto.Fornecedor</td>
+                                            <td>@produto.EstoqueAtual</td>
+                                            <td>@produto.EstoqueMinimo</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => Editar(produto)">Editar</button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Excluir(produto.Id)">Excluir</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyCollection<ProdutoModel> produtos = Array.Empty<ProdutoModel>();
+    private IReadOnlyCollection<ProdutoModel> resultadosBusca = Array.Empty<ProdutoModel>();
+    private string codigo = string.Empty;
+    private string nome = string.Empty;
+    private string categoria = string.Empty;
+    private string fornecedor = string.Empty;
+    private decimal precoUnitario;
+    private int estoqueMinimo;
+    private string codigoBusca = string.Empty;
+    private Guid? produtoParaEditar;
+
+    private bool editing => produtoParaEditar.HasValue;
+    private string ButtonText => editing ? "Salvar alterações" : "Criar produto";
+
+    protected override void OnInitialized()
+    {
+        LoadProducts();
+    }
+
+    private void LoadProducts()
+    {
+        produtos = ProdutoService.ObterTodos();
+        if (string.IsNullOrWhiteSpace(categoria)) categoria = "Geral";
+        if (string.IsNullOrWhiteSpace(fornecedor)) fornecedor = "Fornecedor Padrão";
+    }
+
+    private IReadOnlyCollection<string> Categorias => produtos.Select(p => p.Categoria).Distinct().OrderBy(x => x).Prepend("Geral").Distinct().ToArray();
+    private IReadOnlyCollection<string> Fornecedores => produtos.Select(p => p.Fornecedor).Distinct().OrderBy(x => x).Prepend("Fornecedor Padrão").Distinct().ToArray();
+
+    private void SalvarProduto()
+    {
+        if (produtoParaEditar is Guid id)
+        {
+            ProdutoService.AtualizarProduto(id, nome, precoUnitario, estoqueMinimo);
+        }
+        else
+        {
+            ProdutoService.CriarProduto(codigo, nome, categoria, fornecedor, precoUnitario, estoqueMinimo);
+        }
+
+        ResetForm();
+        LoadProducts();
+    }
+
+    private void BuscarPorCodigo()
+    {
+        resultadosBusca = string.IsNullOrWhiteSpace(codigoBusca)
+            ? Array.Empty<ProdutoModel>()
+            : ProdutoService.ObterPorCodigo(codigoBusca);
+    }
+
+    private void Editar(ProdutoModel produto)
+    {
+        produtoParaEditar = produto.Id;
+        codigo = produto.Codigo;
+        nome = produto.Nome;
+        categoria = produto.Categoria;
+        fornecedor = produto.Fornecedor;
+        precoUnitario = produto.PrecoUnitario;
+        estoqueMinimo = produto.EstoqueMinimo;
+    }
+
+    private void Excluir(Guid id)
+    {
+        ProdutoService.DeletarProduto(id);
+        LoadProducts();
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        produtoParaEditar = null;
+        codigo = string.Empty;
+        nome = string.Empty;
+        categoria = string.Empty;
+        fornecedor = string.Empty;
+        precoUnitario = 0;
+        estoqueMinimo = 0;
+    }
+}
