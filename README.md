@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 AtividadeThiago
 
 Instruções para versionar este projeto e enviá-lo ao GitHub.
