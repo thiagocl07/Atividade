@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject IProdutoService ProdutoService
+@inject IMovimentacaoService MovimentacaoService
 
 <PageTitle>Registro de produtos</PageTitle>
 
@@ -8,6 +9,23 @@
         <h1>Controle de estoque</h1>
         <p>Registre, atualize e pesquise produtos com persistência em memória.</p>
     </section>
+
+    @if (produtosAbaixoDoMinimo.Any())
+    {
+        <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+            <strong>⚠️ Atenção: Produtos com estoque baixo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="mt-2">
+                @foreach (var prod in produtosAbaixoDoMinimo)
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span><strong>@prod.Codigo</strong> - @prod.Nome: Estoque atual @prod.EstoqueAtual / Mínimo @prod.EstoqueMinimo</span>
+                        <span class="badge bg-danger">Faltam @(prod.EstoqueMinimo - prod.EstoqueAtual) unidades</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 
     <div class="row gx-4">
         <div class="col-lg-5">
@@ -70,6 +88,44 @@
                     }
                 </div>
             </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Movimentação de estoque</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Produto</label>
+                        <select class="form-select" @bind="produtoMovimentacaoId">
+                            <option value="">Selecione um produto...</option>
+                            @foreach (var prod in produtos)
+                            {
+                                <option value="@prod.Id">@prod.Codigo - @prod.Nome</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" @bind="tipoMovimentacao">
+                            <option value="">Selecione...</option>
+                            <option value="Entrada">Entrada</option>
+                            <option value="Saída">Saída</option>
+                            <option value="Ajuste">Ajuste</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Quantidade</label>
+                        <input class="form-control" type="number" min="1" @bind="quantidadeMovimentacao" placeholder="0" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Motivo</label>
+                        <input class="form-control" @bind="motivoMovimentacao" placeholder="Descreva o motivo" />
+                    </div>
+
+                    <button class="btn btn-success w-100" @onclick="RegistrarMovimentacao">Registrar</button>
+                </div>
+            </div>
         </div>
 
         <div class="col-lg-7">
@@ -126,6 +182,7 @@
 
 @code {
     private IReadOnlyCollection<ProdutoModel> produtos = Array.Empty<ProdutoModel>();
+    private IReadOnlyCollection<ProdutoModel> produtosAbaixoDoMinimo = Array.Empty<ProdutoModel>();
     private IReadOnlyCollection<ProdutoModel> resultadosBusca = Array.Empty<ProdutoModel>();
     private string codigo = string.Empty;
     private string nome = string.Empty;
@@ -135,6 +192,10 @@
     private int estoqueMinimo;
     private string codigoBusca = string.Empty;
     private Guid? produtoParaEditar;
+    private string produtoMovimentacaoId = string.Empty;
+    private string tipoMovimentacao = string.Empty;
+    private int quantidadeMovimentacao;
+    private string motivoMovimentacao = string.Empty;
 
     private bool editing => produtoParaEditar.HasValue;
     private string ButtonText => editing ? "Salvar alterações" : "Criar produto";
@@ -147,6 +208,7 @@
     private void LoadProducts()
     {
         produtos = ProdutoService.ObterTodos();
+        produtosAbaixoDoMinimo = produtos.Where(p => p.EstoqueAtual < p.EstoqueMinimo).ToArray();
         if (string.IsNullOrWhiteSpace(categoria)) categoria = "Geral";
         if (string.IsNullOrWhiteSpace(fornecedor)) fornecedor = "Fornecedor Padrão";
     }
@@ -159,10 +221,12 @@
         if (produtoParaEditar is Guid id)
         {
             ProdutoService.AtualizarProduto(id, nome, precoUnitario, estoqueMinimo);
+            MovimentacaoService.RegistrarMovimentacao(codigo, "Ajuste", 0, 0, 0, $"Produto atualizado: {nome}");
         }
         else
         {
             ProdutoService.CriarProduto(codigo, nome, categoria, fornecedor, precoUnitario, estoqueMinimo);
+            MovimentacaoService.RegistrarMovimentacao(codigo, "Ajuste", 0, 0, 0, "Produto criado");
         }
 
         ResetForm();
@@ -189,9 +253,52 @@
 
     private void Excluir(Guid id)
     {
+        var produto = produtos.FirstOrDefault(p => p.Id == id);
+        if (produto is not null)
+        {
+            MovimentacaoService.RegistrarMovimentacao(produto.Codigo, "Ajuste", 0, 0, 0, "Produto excluído");
+        }
+
         ProdutoService.DeletarProduto(id);
         LoadProducts();
         ResetForm();
+    }
+
+    private void RegistrarMovimentacao()
+    {
+        if (!Guid.TryParse(produtoMovimentacaoId, out var prodId))
+        {
+            return;
+        }
+
+        var produto = produtos.FirstOrDefault(p => p.Id == prodId);
+        if (produto is null || string.IsNullOrWhiteSpace(tipoMovimentacao) || quantidadeMovimentacao <= 0 || string.IsNullOrWhiteSpace(motivoMovimentacao))
+        {
+            return;
+        }
+
+        var saldoAnterior = produto.EstoqueAtual;
+        var saldoAtual = tipoMovimentacao switch
+        {
+            "Entrada" => saldoAnterior + quantidadeMovimentacao,
+            "Saída" => saldoAnterior - quantidadeMovimentacao,
+            "Ajuste" => quantidadeMovimentacao,
+            _ => saldoAnterior
+        };
+
+        MovimentacaoService.RegistrarMovimentacao(
+            produto.Codigo,
+            tipoMovimentacao,
+            quantidadeMovimentacao,
+            saldoAnterior,
+            saldoAtual,
+            motivoMovimentacao);
+
+        produtoMovimentacaoId = string.Empty;
+        tipoMovimentacao = string.Empty;
+        quantidadeMovimentacao = 0;
+        motivoMovimentacao = string.Empty;
+        LoadProducts();
     }
 
     private void ResetForm()

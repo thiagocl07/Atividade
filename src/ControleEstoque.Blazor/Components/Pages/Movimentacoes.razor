@@ -1,0 +1,94 @@
+@page "/movimentacoes"
+@inject IMovimentacaoService MovimentacaoService
+
+<PageTitle>Histórico de alterações no estoque</PageTitle>
+
+<div class="page-shell">
+    <section class="section-intro">
+        <h1>Histórico de alterações no estoque</h1>
+        <p>Acompanhe todos os registros de entrada, saída e ajuste de produtos.</p>
+    </section>
+
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <span>Movimentações recentes</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="CarregarMovimentacoes">Atualizar</button>
+        </div>
+        <div class="card-body">
+            @if (!movimentacoes.Any())
+            {
+                <p class="text-muted">Nenhuma movimentação registrada ainda.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Produto</th>
+                                <th>Tipo</th>
+                                <th>Quantidade</th>
+                                <th>Saldo anterior</th>
+                                <th>Saldo atual</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var mov in movimentacoes)
+                            {
+                                <tr class="@ObterClassePorTipo(mov.Tipo)">
+                                    <td>@mov.DataCriacao.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td><strong>@mov.CodigoProduto</strong></td>
+                                    <td>
+                                        <span class="badge @ObterBadgePorTipo(mov.Tipo)">@mov.Tipo</span>
+                                    </td>
+                                    <td>@mov.Quantidade</td>
+                                    <td>@mov.SaldoAnterior</td>
+                                    <td>@mov.SaldoAtual</td>
+                                    <td>@mov.Motivo</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyCollection<MovimentacaoModel> movimentacoes = Array.Empty<MovimentacaoModel>();
+
+    protected override void OnInitialized()
+    {
+        CarregarMovimentacoes();
+    }
+
+    private void CarregarMovimentacoes()
+    {
+        movimentacoes = MovimentacaoService.ObterMovimentacoesRecentes(100);
+    }
+
+    private string ObterClassePorTipo(string tipo)
+    {
+        return tipo switch
+        {
+            "Entrada" => "table-success",
+            "Saída" => "table-warning",
+            "Ajuste" => "table-info",
+            _ => ""
+        };
+    }
+
+    private string ObterBadgePorTipo(string tipo)
+    {
+        return tipo switch
+        {
+            "Entrada" => "bg-success",
+            "Saída" => "bg-warning text-dark",
+            "Ajuste" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+}

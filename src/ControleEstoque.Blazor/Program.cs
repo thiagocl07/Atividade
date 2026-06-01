@@ -9,7 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Registrar repositórios e serviços em memória compartilhados
+var movimentacaoRepository = new InMemoryMovimentacaoRepository();
 builder.Services.AddSingleton<IProdutoService>(_ => new ProdutoService(new InMemoryProdutoRepository()));
+builder.Services.AddSingleton<IMovimentacaoService>(_ => new MovimentacaoService(movimentacaoRepository));
+builder.Services.AddSingleton(movimentacaoRepository);
 
 var app = builder.Build();
 
