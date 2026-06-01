@@ -1,6 +1,7 @@
 using ControleEstoque.Application.Interfaces;
 using ControleEstoque.Application.Repositories;
 using ControleEstoque.Application.Services;
+using ControleEstoque.Domain.Interfaces;
 using ControleEstoque.Blazor.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,8 +11,16 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // Registrar repositórios e serviços em memória compartilhados
+var produtoRepository = new InMemoryProdutoRepository();
 var movimentacaoRepository = new InMemoryMovimentacaoRepository();
-builder.Services.AddSingleton<IProdutoService>(_ => new ProdutoService(new InMemoryProdutoRepository()));
+
+// Registrar repositórios como singletons para garantir persistência em memória
+builder.Services.AddSingleton<IProdutoRepository>(_ => produtoRepository);
+builder.Services.AddSingleton(produtoRepository);
+
+// Registrar serviços via DI — ProdutoService recebe IProdutoRepository
+builder.Services.AddSingleton<IProdutoService, ProdutoService>();
+
 builder.Services.AddSingleton<IMovimentacaoService>(_ => new MovimentacaoService(movimentacaoRepository));
 builder.Services.AddSingleton(movimentacaoRepository);
 
