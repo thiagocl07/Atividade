@@ -3,7 +3,7 @@
     <label class="form-label">@Label</label>
     @if (Items is null || Items.Count <= Threshold)
     {
-        <select class="form-select" @bind="Value">
+        <select class="form-select" value="@Value" @onchange="OnChange">
             <option value="">Selecione...</option>
             @foreach (var item in Items ?? Array.Empty<string>())
             {
@@ -13,9 +13,9 @@
     }
     else
     {
-        <input class="form-control" placeholder="Digite para buscar..." list="@ListId" @bind="Value" @bind:event="oninput" />
+        <input class="form-control" placeholder="Digite para buscar..." list="@ListId" value="@Value" @oninput="OnInput" />
         <datalist id="@ListId">
-            @foreach (var item in Items)
+            @foreach (var item in Items ?? Array.Empty<string>())
             {
                 <option value="@item"></option>
             }
@@ -40,4 +40,14 @@
 
     [Parameter]
     public int Threshold { get; set; } = 8;
+
+    private async Task OnChange(ChangeEventArgs e)
+    {
+        await ValueChanged.InvokeAsync(e?.Value?.ToString());
+    }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        await ValueChanged.InvokeAsync(e?.Value?.ToString());
+    }
 }

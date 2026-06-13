@@ -18,8 +18,20 @@ public sealed class ProdutoService : IProdutoService
     public ProdutoService(IProdutoRepository repository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        // categorias iniciais
         _categorias.Add(new Categoria("Geral"));
+        _categorias.Add(new Categoria("Papelaria"));
+        _categorias.Add(new Categoria("Limpeza"));
+        _categorias.Add(new Categoria("Carnes"));
+        _categorias.Add(new Categoria("Congelados"));
+        _categorias.Add(new Categoria("Frios"));
+        _categorias.Add(new Categoria("Veterinario"));
+        _categorias.Add(new Categoria("Bebidas"));
+        _categorias.Add(new Categoria("Padaria"));
+
+        // fornecedores iniciais
         _fornecedores.Add(new Fornecedor("Fornecedor Padrão", "00000000000191"));
+        _fornecedores.Add(new Fornecedor("Distribuidora ABC", "12345678000199"));
     }
 
     public ProdutoModel CriarProduto(string codigo, string nome, string categoriaNome, string fornecedorNome, decimal precoUnitario, int estoqueMinimo)
@@ -71,6 +83,16 @@ public sealed class ProdutoService : IProdutoService
     public IReadOnlyCollection<ProdutoModel> ObterAbaixoDoMinimo()
     {
         return _repository.ObterAbaixoDoMinimo().Select(ProdutoModel.FromEntity).ToArray();
+    }
+
+    public IReadOnlyCollection<string> ObterCategorias()
+    {
+        return _categorias.Select(c => c.Nome).OrderBy(nome => nome).ToArray();
+    }
+
+    public IReadOnlyCollection<string> ObterFornecedores()
+    {
+        return _fornecedores.Select(f => f.Nome).OrderBy(nome => nome).ToArray();
     }
 
     private Categoria ObterOuCriarCategoria(string nome)

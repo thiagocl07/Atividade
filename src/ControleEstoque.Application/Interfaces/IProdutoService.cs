@@ -13,4 +13,6 @@ public interface IProdutoService
     IReadOnlyCollection<ProdutoModel> ObterTodos();
     IReadOnlyCollection<ProdutoModel> ObterPorCodigo(string codigo);
     IReadOnlyCollection<ProdutoModel> ObterAbaixoDoMinimo();
+    IReadOnlyCollection<string> ObterCategorias();
+    IReadOnlyCollection<string> ObterFornecedores();
 }

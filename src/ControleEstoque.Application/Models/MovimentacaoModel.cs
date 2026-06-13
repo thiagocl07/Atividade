@@ -14,4 +14,23 @@ public sealed class MovimentacaoModel
     public string Motivo { get; init; } = null!;
     public string UsuarioOperador { get; init; } = null!;
     public DateTime DataCriacao { get; init; }
+
+    public static MovimentacaoModel FromEntity(ControleEstoque.Domain.Entities.Movimentacao m)
+    {
+        if (m is null) throw new ArgumentNullException(nameof(m));
+
+        return new MovimentacaoModel
+        {
+            Id = m.Id,
+            CodigoProduto = m.Produto.Codigo,
+            NomeProduto = m.Produto.Nome,
+            Tipo = m.Tipo.ToString(),
+            Quantidade = m.Quantidade,
+            SaldoAnterior = m.SaldoAnterior,
+            SaldoAtual = m.SaldoAtual,
+            Motivo = m.Motivo,
+            UsuarioOperador = m.UsuarioOperador,
+            DataCriacao = m.DataCriacao
+        };
+    }
 }
